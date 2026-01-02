@@ -104,7 +104,7 @@ export default function Checkout() {
           <h2 className="font-serif text-2xl mb-8 text-black">{t("customerInfo")}</h2>
 
           <form id="checkout-form" onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs uppercase tracking-widest block mb-2 font-bold text-stone-700">
                   {t("firstName")}
@@ -177,80 +177,101 @@ export default function Checkout() {
         <div className="bg-white p-8 shadow-sm h-fit sticky top-24 rounded-lg border border-stone-200 text-stone-900">
           <h2 className="font-serif text-2xl mb-8 text-black">{t("total")}</h2>
 
-          {/* ✅ Editable cart list */}
-          <div className="space-y-4 mb-8">
-            {cart.map((item, i) => (
-              <div key={`${item.productId}-${item.variationId || "noVar"}-${i}`} className="flex justify-between gap-4">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="relative border border-stone-200 rounded-md overflow-hidden w-12 h-12 shrink-0">
-                    <img src={item.image} className="w-12 h-12 object-cover" alt="" />
-                  </div>
+          {/* ✅ FIXED cart list layout */}
+          <div className="space-y-0 mb-8">
+            {cart.map((item, i) => {
+              const qty = item.quantity || 1;
+              const title =
+                item.productName?.[language] || item.productName?.["fr"] || "Produit";
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-bold text-stone-900 truncate">
-                          {item.productName?.[language] || item.productName?.["fr"] || "Produit"}
-                        </p>
-                        {item.variationName && (
-                          <p className="text-xs text-stone-500 truncate">{item.variationName}</p>
-                        )}
-                      </div>
-
-                      {/* ✅ remove */}
-                      <button
-                        type="button"
-                        onClick={() => removeFromCart(item.productId, item.variationId)}
-                        className="text-stone-400 hover:text-primary-600 p-1"
-                        aria-label="Remove item"
-                        title={language === "ar" ? "حذف" : "Supprimer"}
-                      >
-                        <X size={16} />
-                      </button>
+              return (
+                <div
+                  key={`${item.productId}-${item.variationId || "noVar"}-${i}`}
+                  className="py-4 border-b border-stone-100"
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Image */}
+                    <div className="relative border border-stone-200 rounded-md overflow-hidden w-12 h-12 shrink-0">
+                      <img
+                        src={item.image}
+                        className="w-12 h-12 object-cover"
+                        alt={title}
+                      />
                     </div>
 
-                    {/* ✅ qty controls + line total */}
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-2 bg-stone-100 rounded-full px-2 py-1">
+                    {/* Middle */}
+                    <div className="flex-1 min-w-0">
+                      {/* Title row + remove */}
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-stone-900 truncate">
+                            {title}
+                          </p>
+                          {item.variationName && (
+                            <p className="text-xs text-stone-500 truncate">
+                              {item.variationName}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Remove button stays INSIDE */}
                         <button
                           type="button"
-                          onClick={() =>
-                            updateQuantity(item.productId, item.variationId, (item.quantity || 1) - 1)
-                          }
-                          className="w-7 h-7 rounded-full bg-white hover:bg-stone-200 transition-colors flex items-center justify-center font-bold"
-                          aria-label="Decrease quantity"
+                          onClick={() => removeFromCart(item.productId, item.variationId)}
+                          className="shrink-0 w-8 h-8 rounded-full hover:bg-stone-100 flex items-center justify-center text-stone-400 hover:text-primary-600"
+                          aria-label="Remove item"
+                          title={language === "ar" ? "حذف" : "Supprimer"}
                         >
-                          −
-                        </button>
-
-                        <span className="text-xs font-bold w-6 text-center">{item.quantity}</span>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateQuantity(item.productId, item.variationId, (item.quantity || 1) + 1)
-                          }
-                          className="w-7 h-7 rounded-full bg-white hover:bg-stone-200 transition-colors flex items-center justify-center font-bold"
-                          aria-label="Increase quantity"
-                        >
-                          +
+                          <X size={16} />
                         </button>
                       </div>
 
-                      <span className="font-medium text-stone-900">
-                        ${formatNumber(item.priceAtTime * (item.quantity || 1))}
-                      </span>
+                      {/* Qty + price row */}
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 bg-stone-100 rounded-full px-2 py-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateQuantity(item.productId, item.variationId, qty - 1)
+                            }
+                            className="w-7 h-7 rounded-full bg-white hover:bg-stone-200 transition-colors flex items-center justify-center font-bold"
+                            aria-label="Decrease quantity"
+                          >
+                            −
+                          </button>
+
+                          <span className="text-xs font-bold w-6 text-center">
+                            {qty}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateQuantity(item.productId, item.variationId, qty + 1)
+                            }
+                            className="w-7 h-7 rounded-full bg-white hover:bg-stone-200 transition-colors flex items-center justify-center font-bold"
+                            aria-label="Increase quantity"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* Price never overflows */}
+                        <span className="font-medium text-stone-900 whitespace-nowrap shrink-0">
+                          ${formatNumber(item.priceAtTime * qty)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="border-t border-stone-100 pt-4 space-y-2 text-sm text-stone-700">
             <div className="flex justify-between">
               <span>{t("subtotal")}</span>
-              <span>${formatNumber(cartTotal)}</span>
+              <span className="whitespace-nowrap">${formatNumber(cartTotal)}</span>
             </div>
             <div className="flex justify-between">
               <span>{t("shipping")}</span>
@@ -258,7 +279,9 @@ export default function Checkout() {
             </div>
             <div className="flex justify-between font-bold text-lg pt-4 border-t border-stone-100 mt-4 text-black">
               <span>{t("total")}</span>
-              <span className="text-primary-600">${formatNumber(cartTotal)}</span>
+              <span className="text-primary-600 whitespace-nowrap">
+                ${formatNumber(cartTotal)}
+              </span>
             </div>
           </div>
 
