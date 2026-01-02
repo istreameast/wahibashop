@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WAHIBASHOP | Soins Brésiliens</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: '#FFF0F5', // Very light pink
+                100: '#FFD6E5',
+                400: '#FF4D9E',
+                600: '#F50057', // Hot Pink / Magenta
+                700: '#C51162', // Deep Pink
+              },
+              secondary: {
+                900: '#000000', // Pure Black
+              },
+              cream: {
+                50: '#FFFAFC', // White with a tiny tint of pink
+              }
+            },
+            fontFamily: {
+              // Playfair for English titles, Cairo for Arabic titles (fallback)
+              serif: ['Playfair Display', 'Cairo', 'serif'],
+              // Lato for English body, Cairo for Arabic body (fallback)
+              sans: ['Lato', 'Cairo', 'sans-serif'],
+              // Explicit Arabic font class
+              arabic: ['Cairo', 'sans-serif'],
+            },
+            animation: {
+              'fade-in-up': 'fadeInUp 1s ease-out forwards',
+            },
+            keyframes: {
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Lato:wght@300;400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+      /* Smooth scrolling for anchor links */
+      html {
+        scroll-behavior: smooth;
+        /* Important: Offset scroll position by navbar height (approx 80px + padding) */
+        scroll-padding-top: 100px; 
+      }
+      /* Hide scrollbar for clean UI but keep functionality */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      /* Print Styles */
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        .printable-content, .printable-content * {
+          visibility: visible;
+        }
+        .printable-content {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          background: white;
+          z-index: 9999;
+          padding: 20px;
+        }
+        .no-print {
+          display: none !important;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
