@@ -5,7 +5,16 @@ type CartContextType = {
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
   removeFromCart: (productId: string, variationId?: string | null) => void;
-  updateQuantity: (productId: string, variationId: string | null | undefined, quantity: number) => void;
+
+  updateQuantity: (
+    productId: string,
+    variationId: string | null | undefined,
+    quantity: number
+  ) => void;
+
+  increaseQty: (productId: string, variationId?: string | null) => void;
+  decreaseQty: (productId: string, variationId?: string | null) => void;
+
   clearCart: () => void;
   cartTotal: number;
   cartCount: number;
@@ -32,17 +41,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [cart]);
 
   const addToCart = (item: CartItem) => {
+    const qtyToAdd = Math.max(1, item.quantity || 1);
+
     setCart((prev) => {
       const idx = prev.findIndex(
-        (x) => x.productId === item.productId && (x.variationId || null) === (item.variationId || null)
+        (x) =>
+          x.productId === item.productId &&
+          (x.variationId || null) === (item.variationId || null)
       );
 
       if (idx >= 0) {
         const next = [...prev];
-        next[idx] = { ...next[idx], quantity: next[idx].quantity + item.quantity };
+        next[idx] = { ...next[idx], quantity: (next[idx].quantity || 1) + qtyToAdd };
         return next;
       }
-      return [...prev, item];
+      return [...prev, { ...item, quantity: qtyToAdd }];
     });
   };
 
@@ -54,8 +67,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
-  const updateQuantity = (productId: string, variationId: string | null | undefined, quantity: number) => {
-    const q = Math.max(1, quantity);
+  const updateQuantity = (
+    productId: string,
+    variationId: string | null | undefined,
+    quantity: number
+  ) => {
+    const q = Math.max(1, Math.floor(Number(quantity) || 1));
+
     setCart((prev) =>
       prev.map((x) => {
         if (x.productId === productId && (x.variationId || null) === (variationId || null)) {
@@ -66,18 +84,52 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  const increaseQty = (productId: string, variationId?: string | null) => {
+    setCart((prev) =>
+      prev.map((x) => {
+        if (x.productId === productId && (x.variationId || null) === (variationId || null)) {
+          return { ...x, quantity: (x.quantity || 1) + 1 };
+        }
+        return x;
+      })
+    );
+  };
+
+  const decreaseQty = (productId: string, variationId?: string | null) => {
+    setCart((prev) =>
+      prev.map((x) => {
+        if (x.productId === productId && (x.variationId || null) === (variationId || null)) {
+          return { ...x, quantity: Math.max(1, (x.quantity || 1) - 1) };
+        }
+        return x;
+      })
+    );
+  };
+
   const clearCart = () => setCart([]);
 
   const cartTotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.priceAtTime * item.quantity, 0);
+    return cart.reduce((sum, item) => sum + item.priceAtTime * (item.quantity || 1), 0);
   }, [cart]);
 
   const cartCount = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.quantity, 0);
+    return cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
   }, [cart]);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount }}>
+    <CartContext.Provider
+      value={{
+        cart,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        increaseQty,
+        decreaseQty,
+        clearCart,
+        cartTotal,
+        cartCount,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

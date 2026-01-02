@@ -19,17 +19,23 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { language, setLanguage, t, isRTL, formatNumber } = useLanguage();
-  const { isCartOpen, setIsCartOpen, cart, removeFromCart, cartTotal } =
-    useCart();
+  const {
+    isCartOpen,
+    setIsCartOpen,
+    cart,
+    removeFromCart,
+    cartTotal,
+    increaseQty,
+    decreaseQty,
+  } = useCart();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);
 
-  // Show WhatsApp button only on Home and Product pages
   const showWhatsApp =
     location.pathname === "/" || location.pathname.startsWith("/product/");
 
@@ -119,21 +125,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 {language === "fr" ? "AR" : "FR"}
               </button>
 
-              <Link to="/admin" className="p-2 hover:text-primary-600 hidden sm:block">
+              <Link
+                to="/admin"
+                className="p-2 hover:text-primary-600 hidden sm:block"
+              >
                 <User size={20} />
               </Link>
 
-              {/* ✅ PANNIER ICON -> GO TO CHECKOUT */}
+              {/* PANNIER ICON -> GO TO CHECKOUT */}
               <Link
                 to="/checkout"
                 onClick={(e) => {
-                  // If cart empty, checkout page redirects to home, so user thinks "not working"
                   if (!cart || cart.length === 0) {
                     e.preventDefault();
                     alert(language === "ar" ? "السلة فارغة" : "Votre panier est vide.");
                     return;
                   }
-                  // close cart drawer if open
                   setIsCartOpen(false);
                 }}
                 className="p-2 hover:text-primary-600 relative group"
@@ -147,8 +154,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </span>
                 )}
               </Link>
-
-              {/* Keep drawer feature: if you still want to open it from somewhere else, you can */}
             </div>
           </div>
         </div>
@@ -204,7 +209,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         )}
       </nav>
 
-      {/* Cart Drawer (unchanged) */}
+      {/* Cart Drawer */}
       {isCartOpen && (
         <>
           <div
@@ -249,28 +254,55 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           className="w-full h-full object-cover"
                         />
                       </div>
+
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
                           <h3 className="font-bold text-sm text-black">
                             {item.productName[language]}
                           </h3>
+
                           <button
                             type="button"
                             onClick={() => removeFromCart(item.productId, item.variationId)}
                             className="text-stone-400 hover:text-primary-600"
+                            aria-label="Remove item"
                           >
                             <X size={16} />
                           </button>
                         </div>
+
                         {item.variationName && (
                           <p className="text-xs text-stone-500 mt-1">{item.variationName}</p>
                         )}
-                        <div className="flex justify-between items-end mt-2">
-                          <span className="text-xs text-stone-500 bg-stone-100 px-2 py-1 rounded">
-                            Qty: {item.quantity}
-                          </span>
+
+                        <div className="flex justify-between items-end mt-3">
+                          {/* ✅ Qty controls */}
+                          <div className="flex items-center gap-2 bg-stone-100 rounded-full px-2 py-1">
+                            <button
+                              type="button"
+                              onClick={() => decreaseQty(item.productId, item.variationId)}
+                              className="w-7 h-7 rounded-full bg-white hover:bg-stone-200 transition-colors flex items-center justify-center font-bold"
+                              aria-label="Decrease quantity"
+                            >
+                              −
+                            </button>
+
+                            <span className="text-xs font-bold w-6 text-center">
+                              {item.quantity}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => increaseQty(item.productId, item.variationId)}
+                              className="w-7 h-7 rounded-full bg-white hover:bg-stone-200 transition-colors flex items-center justify-center font-bold"
+                              aria-label="Increase quantity"
+                            >
+                              +
+                            </button>
+                          </div>
+
                           <span className="font-bold text-sm text-primary-600">
-                            ${formatNumber(item.priceAtTime * item.quantity)}
+                            ${formatNumber(item.priceAtTime * (item.quantity || 1))}
                           </span>
                         </div>
                       </div>
