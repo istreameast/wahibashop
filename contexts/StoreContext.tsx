@@ -1,6 +1,30 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product, Order, ContactMessage, ClientResult, HeroImage, Testimonial } from '../types';
-import { SEED_PRODUCTS, DEFAULT_HERO_IMAGES, SEED_CLIENT_RESULTS, SEED_TESTIMONIALS } from '../constants';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import {
+  collection,
+  onSnapshot,
+  setDoc,
+  doc,
+  deleteDoc,
+  updateDoc,
+  writeBatch,
+  getDocs,
+} from "firebase/firestore";
+
+import { db } from "../firebase";
+import {
+  Product,
+  Order,
+  ContactMessage,
+  ClientResult,
+  HeroImage,
+  Testimonial,
+} from "../types";
+import {
+  SEED_PRODUCTS,
+  DEFAULT_HERO_IMAGES,
+  SEED_CLIENT_RESULTS,
+  SEED_TESTIMONIALS,
+} from "../constants";
 
 interface StoreContextType {
   products: Product[];
@@ -9,174 +33,214 @@ interface StoreContextType {
   sliderImages: HeroImage[];
   clientResults: ClientResult[];
   testimonials: Testimonial[];
-  addProduct: (product: Product) => void;
-  updateProduct: (product: Product) => void;
-  deleteProduct: (id: string) => void;
-  addOrder: (order: Order) => void;
-  updateOrderStatus: (id: string, status: Order['status']) => void;
-  addMessage: (msg: ContactMessage) => void;
-  addSliderImage: (img: HeroImage) => void;
-  removeSliderImage: (index: number) => void;
-  addClientResult: (result: ClientResult) => void;
-  removeClientResult: (id: string) => void;
-  addTestimonial: (testi: Testimonial) => void;
-  removeTestimonial: (id: string) => void;
-  resetStore: () => void;
+
+  addProduct: (product: Product) => Promise<void>;
+  updateProduct: (product: Product) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+
+  addOrder: (order: Order) => Promise<void>;
+  updateOrderStatus: (id: string, status: Order["status"]) => Promise<void>;
+
+  addMessage: (msg: ContactMessage) => Promise<void>;
+
+  addSliderImage: (img: HeroImage) => Promise<void>;
+  removeSliderImage: (index: number) => Promise<void>;
+
+  addClientResult: (result: ClientResult) => Promise<void>;
+  removeClientResult: (id: string) => Promise<void>;
+
+  addTestimonial: (testi: Testimonial) => Promise<void>;
+  removeTestimonial: (id: string) => Promise<void>;
+
+  resetStore: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [sliderImages, setSliderImages] = useState<HeroImage[]>([]);
   const [clientResults, setClientResults] = useState<ClientResult[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load from LocalStorage
-  useEffect(() => {
-    try {
-      const storedProducts = localStorage.getItem('ls_products');
-      const storedOrders = localStorage.getItem('ls_orders');
-      const storedMessages = localStorage.getItem('ls_messages');
-      const storedSlider = localStorage.getItem('ls_slider_images');
-      const storedClientResults = localStorage.getItem('ls_client_results');
-      const storedTestimonials = localStorage.getItem('ls_testimonials');
+  const seedCollection = async (collectionName: string, data: any[]) => {
+    const colRef = collection(db, collectionName);
+    const snapshot = await getDocs(colRef);
 
-      if (storedProducts) {
-        setProducts(JSON.parse(storedProducts));
-      } else {
-        setProducts(SEED_PRODUCTS);
-      }
-
-      if (storedOrders) setOrders(JSON.parse(storedOrders));
-      if (storedMessages) setMessages(JSON.parse(storedMessages));
-      
-      if (storedSlider) {
-        const parsedSlider = JSON.parse(storedSlider);
-        // Backward compatibility check
-        if (parsedSlider.length > 0 && typeof parsedSlider[0] === 'string') {
-          // Convert string array to HeroImage objects
-          const converted = parsedSlider.map((url: string, index: number) => ({
-            id: `legacy-${index}`,
-            url,
-            position: '50% 50%'
-          }));
-          setSliderImages(converted);
-        } else {
-          setSliderImages(parsedSlider);
-        }
-      } else {
-        setSliderImages(DEFAULT_HERO_IMAGES);
-      }
-
-      if (storedClientResults) {
-        setClientResults(JSON.parse(storedClientResults));
-      } else {
-        setClientResults(SEED_CLIENT_RESULTS);
-      }
-
-      if (storedTestimonials) {
-        setTestimonials(JSON.parse(storedTestimonials));
-      } else {
-        setTestimonials(SEED_TESTIMONIALS);
-      }
-
-    } catch (e) {
-      console.error('Failed to parse storage', e);
-      setProducts(SEED_PRODUCTS);
-      setSliderImages(DEFAULT_HERO_IMAGES);
-      setClientResults(SEED_CLIENT_RESULTS);
-      setTestimonials(SEED_TESTIMONIALS);
-    } finally {
-      setIsInitialized(true);
+    if (snapshot.empty && data.length > 0) {
+      const batch = writeBatch(db);
+      data.forEach((item) => {
+        const id = item.id || `${Date.now()}-${Math.random()}`;
+        const docRef = doc(db, collectionName, id);
+        batch.set(docRef, { ...item, id });
+      });
+      await batch.commit();
     }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      await seedCollection("products", SEED_PRODUCTS);
+      await seedCollection("hero_images", DEFAULT_HERO_IMAGES);
+      await seedCollection("client_results", SEED_CLIENT_RESULTS);
+      await seedCollection("testimonials", SEED_TESTIMONIALS);
+    };
+    init();
+
+    const unsubProducts = onSnapshot(collection(db, "products"), (snap) => {
+      setProducts(snap.docs.map((d) => d.data() as Product));
+    });
+
+    const unsubOrders = onSnapshot(collection(db, "orders"), (snap) => {
+      const ords = snap.docs.map((d) => d.data() as Order);
+      setOrders(
+        ords.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      );
+    });
+
+    const unsubMessages = onSnapshot(collection(db, "messages"), (snap) => {
+      const msgs = snap.docs.map((d) => d.data() as ContactMessage);
+      setMessages(
+        msgs.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      );
+    });
+
+    const unsubHero = onSnapshot(collection(db, "hero_images"), (snap) => {
+      setSliderImages(snap.docs.map((d) => d.data() as HeroImage));
+    });
+
+    const unsubClients = onSnapshot(collection(db, "client_results"), (snap) => {
+      setClientResults(snap.docs.map((d) => d.data() as ClientResult));
+    });
+
+    const unsubTestimonials = onSnapshot(
+      collection(db, "testimonials"),
+      (snap) => {
+        setTestimonials(snap.docs.map((d) => d.data() as Testimonial));
+      }
+    );
+
+    return () => {
+      unsubProducts();
+      unsubOrders();
+      unsubMessages();
+      unsubHero();
+      unsubClients();
+      unsubTestimonials();
+    };
   }, []);
 
-  // Save to LocalStorage
-  useEffect(() => {
-    if (!isInitialized) return;
-    localStorage.setItem('ls_products', JSON.stringify(products));
-  }, [products, isInitialized]);
-
-  useEffect(() => {
-    if (!isInitialized) return;
-    localStorage.setItem('ls_orders', JSON.stringify(orders));
-  }, [orders, isInitialized]);
-
-  useEffect(() => {
-    if (!isInitialized) return;
-    localStorage.setItem('ls_messages', JSON.stringify(messages));
-  }, [messages, isInitialized]);
-
-  useEffect(() => {
-    if (!isInitialized) return;
-    localStorage.setItem('ls_slider_images', JSON.stringify(sliderImages));
-  }, [sliderImages, isInitialized]);
-
-  useEffect(() => {
-    if (!isInitialized) return;
-    localStorage.setItem('ls_client_results', JSON.stringify(clientResults));
-  }, [clientResults, isInitialized]);
-
-  useEffect(() => {
-    if (!isInitialized) return;
-    localStorage.setItem('ls_testimonials', JSON.stringify(testimonials));
-  }, [testimonials, isInitialized]);
-
-  const addProduct = (product: Product) => setProducts([...products, product]);
-  
-  const updateProduct = (updated: Product) => {
-    setProducts(products.map(p => p.id === updated.id ? updated : p));
+  const addProduct = async (product: Product) => {
+    await setDoc(doc(db, "products", product.id), product);
   };
 
-  const deleteProduct = (id: string) => {
-    setProducts(products.filter(p => p.id !== id));
+  const updateProduct = async (product: Product) => {
+    await setDoc(doc(db, "products", product.id), product);
   };
 
-  const addOrder = (order: Order) => setOrders([order, ...orders]);
-  
-  const updateOrderStatus = (id: string, status: Order['status']) => {
-    setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
+  const deleteProduct = async (id: string) => {
+    await deleteDoc(doc(db, "products", id));
   };
 
-  const addMessage = (msg: ContactMessage) => setMessages([msg, ...messages]);
-
-  const addSliderImage = (img: HeroImage) => setSliderImages([...sliderImages, img]);
-  
-  const removeSliderImage = (index: number) => {
-    setSliderImages(sliderImages.filter((_, i) => i !== index));
+  const addOrder = async (order: Order) => {
+    await setDoc(doc(db, "orders", order.id), order);
   };
 
-  const addClientResult = (res: ClientResult) => setClientResults([...clientResults, res]);
-  const removeClientResult = (id: string) => setClientResults(clientResults.filter(r => r.id !== id));
+  const updateOrderStatus = async (id: string, status: Order["status"]) => {
+    await updateDoc(doc(db, "orders", id), { status });
+  };
 
-  const addTestimonial = (testi: Testimonial) => setTestimonials([...testimonials, testi]);
-  const removeTestimonial = (id: string) => setTestimonials(testimonials.filter(t => t.id !== id));
+  const addMessage = async (msg: ContactMessage) => {
+    await setDoc(doc(db, "messages", msg.id), msg);
+  };
 
-  const resetStore = () => {
-    localStorage.clear();
-    setProducts(SEED_PRODUCTS);
-    setSliderImages(DEFAULT_HERO_IMAGES);
-    setClientResults(SEED_CLIENT_RESULTS);
-    setTestimonials(SEED_TESTIMONIALS);
-    setOrders([]);
-    setMessages([]);
+  const addSliderImage = async (img: HeroImage) => {
+    const id = img.id || `${Date.now()}-${Math.random()}`;
+    await setDoc(doc(db, "hero_images", id), { ...img, id });
+  };
+
+  // Admin uses index, so delete by index->id
+  const removeSliderImage = async (index: number) => {
+    const item = sliderImages[index];
+    if (!item?.id) return;
+    await deleteDoc(doc(db, "hero_images", item.id));
+  };
+
+  const addClientResult = async (result: ClientResult) => {
+    await setDoc(doc(db, "client_results", result.id), result);
+  };
+
+  const removeClientResult = async (id: string) => {
+    await deleteDoc(doc(db, "client_results", id));
+  };
+
+  const addTestimonial = async (testi: Testimonial) => {
+    await setDoc(doc(db, "testimonials", testi.id), testi);
+  };
+
+  const removeTestimonial = async (id: string) => {
+    await deleteDoc(doc(db, "testimonials", id));
+  };
+
+  const resetStore = async () => {
+    if (
+      !window.confirm(
+        "WARNING: This will delete ALL data from Firestore. Are you sure?"
+      )
+    )
+      return;
+
+    const collections = [
+      "products",
+      "orders",
+      "messages",
+      "hero_images",
+      "client_results",
+      "testimonials",
+    ];
+
+    for (const colName of collections) {
+      const snap = await getDocs(collection(db, colName));
+      const batch = writeBatch(db);
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+
     window.location.reload();
   };
 
   return (
-    <StoreContext.Provider value={{ 
-      products, orders, messages, sliderImages, clientResults, testimonials,
-      addProduct, updateProduct, deleteProduct, 
-      addOrder, updateOrderStatus, addMessage,
-      addSliderImage, removeSliderImage,
-      addClientResult, removeClientResult,
-      addTestimonial, removeTestimonial,
-      resetStore
-    }}>
+    <StoreContext.Provider
+      value={{
+        products,
+        orders,
+        messages,
+        sliderImages,
+        clientResults,
+        testimonials,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+        addOrder,
+        updateOrderStatus,
+        addMessage,
+        addSliderImage,
+        removeSliderImage,
+        addClientResult,
+        removeClientResult,
+        addTestimonial,
+        removeTestimonial,
+        resetStore,
+      }}
+    >
       {children}
     </StoreContext.Provider>
   );
@@ -184,6 +248,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 export const useStore = () => {
   const context = useContext(StoreContext);
-  if (!context) throw new Error('useStore must be used within StoreProvider');
+  if (!context) throw new Error("useStore must be used within StoreProvider");
   return context;
 };
